@@ -54,12 +54,19 @@ public sealed class GitHubFileStore : IGitHubFileStore
     public async ValueTask<FileCommit?> Write(string owner, string repo, string path, string content, string? message = null, string branch = "main",
         string? authorName = null, string? authorEmail = null, CancellationToken cancellationToken = default)
     {
+        byte[] bytes = content.ToBytes();
+        return await WriteBytes(owner, repo, path, bytes, message, branch, authorName, authorEmail, cancellationToken);
+    }
+
+    public async ValueTask<FileCommit?> WriteBytes(string owner, string repo, string path, byte[] content, string? message = null, string branch = "main",
+        string? authorName = null, string? authorEmail = null, CancellationToken cancellationToken = default)
+    {
         GitHubOpenApiClient client = await _clientUtil.Get(cancellationToken).NoSync();
 
         var requestBody = new WithPathPutRequestBody
         {
             Message = message ?? GetDefaultMessage("Write", path),
-            Content = content.ToBytes().ToBase64String(),
+            Content = Convert.ToBase64String(content),
             Branch = branch,
             Author = authorName != null && authorEmail != null
                 ? new WithPathPutRequestBody_author
