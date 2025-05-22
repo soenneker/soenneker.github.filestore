@@ -37,7 +37,12 @@ public interface IGitHubFileStore
     /// <param name="path">The path to the file.</param>
     /// <param name="cancellationToken">Optional cancellation token.</param>
     /// <returns>The file contents as a string.</returns>
-    ValueTask<byte[]> ReadAsBytes(string owner, string repo, string path, CancellationToken cancellationToken = default);
+    ValueTask<byte[]> ReadToBytes(string owner, string repo, string path, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads the contents of a GitHub repository file and writes it to a local file.
+    /// </summary>
+    ValueTask ReadToFile(string owner, string repo, string path, string filePath, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Creates a new file.
@@ -69,6 +74,12 @@ public interface IGitHubFileStore
     /// <param name="authorName"></param>
     /// <returns>The file commit information.</returns>
     ValueTask<FileCommit?> WriteBytes(string owner, string repo, string path, byte[] content, string? message = null, string branch = "main",
+        string? authorName = null, string? authorEmail = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Writes the contents of a local file to a GitHub repository path.
+    /// </summary>
+    ValueTask<FileCommit?> WriteFromFile(string owner, string repo, string path, string filePath, string? message = null, string branch = "main",
         string? authorName = null, string? authorEmail = null, CancellationToken cancellationToken = default);
 
     /// <summary>

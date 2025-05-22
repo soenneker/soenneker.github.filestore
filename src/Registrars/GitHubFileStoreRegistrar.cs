@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Soenneker.GitHub.ClientUtil.Registrars;
 using Soenneker.GitHub.FileStore.Abstract;
+using Soenneker.Utils.File.Registrars;
 
 namespace Soenneker.GitHub.FileStore.Registrars;
 
@@ -15,7 +16,7 @@ public static class GitHubFileStoreRegistrar
     /// </summary>
     public static IServiceCollection AddGitHubFileStoreAsSingleton(this IServiceCollection services)
     {
-        services.AddGitHubOpenApiClientUtilAsSingleton().TryAddSingleton<IGitHubFileStore, GitHubFileStore>();
+        services.AddGitHubOpenApiClientUtilAsSingleton().AddFileUtilAsSingleton().TryAddSingleton<IGitHubFileStore, GitHubFileStore>();
 
         return services;
     }
@@ -25,7 +26,7 @@ public static class GitHubFileStoreRegistrar
     /// </summary>
     public static IServiceCollection AddGitHubFileStoreAsScoped(this IServiceCollection services)
     {
-        services.AddGitHubOpenApiClientUtilAsSingleton().TryAddScoped<IGitHubFileStore, GitHubFileStore>();
+        services.AddGitHubOpenApiClientUtilAsSingleton().AddFileUtilAsScoped().TryAddScoped<IGitHubFileStore, GitHubFileStore>();
 
         return services;
     }

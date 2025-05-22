@@ -7,6 +7,7 @@ using Soenneker.GitHub.FileStore.Abstract;
 using Soenneker.GitHub.OpenApiClient;
 using Soenneker.GitHub.OpenApiClient.Models;
 using Soenneker.GitHub.OpenApiClient.Repos.Item.Item.Contents.Item;
+using Soenneker.Utils.File.Abstract;
 using System;
 using System.IO;
 using System.Linq;
@@ -19,10 +20,12 @@ namespace Soenneker.GitHub.FileStore;
 public sealed class GitHubFileStore : IGitHubFileStore
 {
     private readonly IGitHubOpenApiClientUtil _clientUtil;
+    private readonly IFileUtil _fileUtil;
 
-    public GitHubFileStore(IGitHubOpenApiClientUtil clientUtil)
+    public GitHubFileStore(IGitHubOpenApiClientUtil clientUtil, IFileUtil fileUtil)
     {
         _clientUtil = clientUtil;
+        _fileUtil = fileUtil;
     }
 
     public async ValueTask<ContentFile> Get(string owner, string repo, string path, CancellationToken cancellationToken = default)
@@ -37,11 +40,11 @@ public sealed class GitHubFileStore : IGitHubFileStore
 
     public async ValueTask<string> Read(string owner, string repo, string path, CancellationToken cancellationToken = default)
     {
-        byte[] bytes = await ReadAsBytes(owner, repo, path, cancellationToken).NoSync();
+        byte[] bytes = await ReadToBytes(owner, repo, path, cancellationToken).NoSync();
         return bytes.ToStr();
     }
 
-    public async ValueTask<byte[]> ReadAsBytes(string owner, string repo, string path, CancellationToken cancellationToken = default)
+    public async ValueTask<byte[]> ReadToBytes(string owner, string repo, string path, CancellationToken cancellationToken = default)
     {
         ContentFile contentFile = await Get(owner, repo, path, cancellationToken).NoSync();
 
@@ -51,11 +54,24 @@ public sealed class GitHubFileStore : IGitHubFileStore
         return contentFile.Encoding?.ToLowerInvariantFast() == "base64" ? contentFile.Content.ToBytesFromBase64() : contentFile.Content.ToBytes();
     }
 
+    public async ValueTask ReadToFile(string owner, string repo, string path, string filePath, CancellationToken cancellationToken = default)
+    {
+        byte[] fileBytes = await ReadToBytes(owner, repo, path, cancellationToken).NoSync();
+        await _fileUtil.Write(filePath, fileBytes, cancellationToken).NoSync();
+    }
+
     public async ValueTask<FileCommit?> Write(string owner, string repo, string path, string content, string? message = null, string branch = "main",
         string? authorName = null, string? authorEmail = null, CancellationToken cancellationToken = default)
     {
         byte[] bytes = content.ToBytes();
         return await WriteBytes(owner, repo, path, bytes, message, branch, authorName, authorEmail, cancellationToken);
+    }
+
+    public async ValueTask<FileCommit?> WriteFromFile(string owner, string repo, string path, string filePath, string? message = null, string branch = "main",
+        string? authorName = null, string? authorEmail = null, CancellationToken cancellationToken = default)
+    {
+        byte[] fileBytes = await _fileUtil.ReadToBytes(filePath, cancellationToken).NoSync();
+        return await WriteBytes(owner, repo, path, fileBytes, message, branch, authorName, authorEmail, cancellationToken);
     }
 
     public async ValueTask<FileCommit?> WriteBytes(string owner, string repo, string path, byte[] content, string? message = null, string branch = "main",
