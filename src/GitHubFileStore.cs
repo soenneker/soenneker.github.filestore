@@ -64,14 +64,14 @@ public sealed class GitHubFileStore : IGitHubFileStore
         string? authorName = null, string? authorEmail = null, CancellationToken cancellationToken = default)
     {
         byte[] bytes = content.ToBytes();
-        return await WriteBytes(owner, repo, path, bytes, message, branch, authorName, authorEmail, cancellationToken);
+        return await WriteBytes(owner, repo, path, bytes, message, branch, authorName, authorEmail, cancellationToken).NoSync();
     }
 
     public async ValueTask<FileCommit?> WriteFromFile(string owner, string repo, string path, string filePath, string? message = null, string branch = "main",
         string? authorName = null, string? authorEmail = null, CancellationToken cancellationToken = default)
     {
         byte[] fileBytes = await _fileUtil.ReadToBytes(filePath, cancellationToken).NoSync();
-        return await WriteBytes(owner, repo, path, fileBytes, message, branch, authorName, authorEmail, cancellationToken);
+        return await WriteBytes(owner, repo, path, fileBytes, message, branch, authorName, authorEmail, cancellationToken).NoSync();
     }
 
     public async ValueTask<FileCommit?> WriteBytes(string owner, string repo, string path, byte[] content, string? message = null, string branch = "main",
