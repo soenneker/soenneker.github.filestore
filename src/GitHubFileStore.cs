@@ -223,6 +223,10 @@ public sealed class GitHubFileStore : IGitHubFileStore
         {
             _logger.LogDebug("No existing file at '{Path}'; creating new.", path);
         }
+        catch (BasicError ex) when (ex.Message?.Contains("This repository is empty") == true)
+        {
+            _logger.LogDebug("Repository is empty; creating first commit without SHA.");
+        }
 
         FileCommit? commit;
         try
