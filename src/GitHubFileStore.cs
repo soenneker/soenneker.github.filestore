@@ -53,7 +53,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
         {
             response = await client.Repos[owner][repo].Contents[path].GetAsWithPathGetResponseAsync(cancellationToken: cancellationToken).NoSync();
         }
-        catch (Exception ex) when (!(ex is FileNotFoundException))
+        catch (Exception ex) when (!(ex is FileNotFoundException) && !(ex is BasicError))
         {
             _logger.LogError(ex, "Error retrieving content for '{Path}'.", path);
             throw;
@@ -230,9 +230,9 @@ public sealed class GitHubFileStore : IGitHubFileStore
         {
             _logger.LogDebug("No existing file at '{Path}'; creating new.", path);
         }
-        catch (BasicError ex) when (ex.Message?.Contains("This repository is empty") == true)
+        catch (BasicError ex) when (ex.Message?.Contains("This repository is empty") == true || ex.Message?.Contains("Not Found") == true)
         {
-            _logger.LogDebug("Repository is empty; creating first commit without SHA.");
+            _logger.LogDebug("Repository is empty or file not found; creating new file without SHA.");
         }
 
         FileCommit? commit;
@@ -240,7 +240,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
         {
             commit = await client.Repos[owner][repo].Contents[path].PutAsync(requestBody, cancellationToken: cancellationToken).NoSync();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!(ex is BasicError))
         {
             _logger.LogError(ex, "Failed to write bytes to '{Path}'.", path);
             throw;
@@ -296,21 +296,19 @@ public sealed class GitHubFileStore : IGitHubFileStore
                 continue;
             }
 
-            FileCommit? commit;
             try
             {
-                commit = await WriteBytes(owner, repo, gitHubPath, content, message, branch, authorName, authorEmail, cancellationToken).NoSync();
+                FileCommit? commit = await WriteBytes(owner, repo, gitHubPath, content, message, branch, authorName, authorEmail, cancellationToken).NoSync();
+                if (commit != null)
+                {
+                    commits.Add(commit);
+                    _logger.LogDebug("Successfully wrote '{GitHubPath}'. Commit SHA: {Sha}", gitHubPath, commit.Commit?.Sha);
+                }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (!(ex is BasicError))
             {
                 _logger.LogError(ex, "Failed to write file '{GitHubPath}'. Skipping.", gitHubPath);
                 continue;
-            }
-
-            if (commit != null)
-            {
-                commits.Add(commit);
-                _logger.LogDebug("Successfully wrote '{GitHubPath}'. Commit SHA: {Sha}", gitHubPath, commit.Commit?.Sha);
             }
         }
 
