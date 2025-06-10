@@ -34,6 +34,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
 
     public async ValueTask<ContentFile> Get(string owner, string repo, string path, CancellationToken cancellationToken = default)
     {
+        path = path.TrimStart('/');
         _logger.LogInformation("Getting file '{Path}' from '{Owner}/{Repo}'.", path, owner, repo);
 
         GitHubOpenApiClient client;
@@ -71,6 +72,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
 
     public async ValueTask<string> Read(string owner, string repo, string path, CancellationToken cancellationToken = default)
     {
+        path = path.TrimStart('/');
         _logger.LogInformation("Reading file '{Path}' as string from '{Owner}/{Repo}'.", path, owner, repo);
 
         byte[] bytes;
@@ -91,6 +93,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
 
     public async ValueTask<byte[]> ReadToBytes(string owner, string repo, string path, CancellationToken cancellationToken = default)
     {
+        path = path.TrimStart('/');
         _logger.LogInformation("Reading file '{Path}' as bytes from '{Owner}/{Repo}'.", path, owner, repo);
 
         ContentFile contentFile;
@@ -128,6 +131,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
 
     public async ValueTask ReadToFile(string owner, string repo, string path, string filePath, CancellationToken cancellationToken = default)
     {
+        path = path.TrimStart('/');
         _logger.LogInformation("Reading '{Path}' from '{Owner}/{Repo}' and writing to local path '{FilePath}'.", path, owner, repo, filePath);
 
         byte[] fileBytes;
@@ -157,6 +161,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
     public async ValueTask<FileCommit?> Write(string owner, string repo, string path, string content, string? message = null, string branch = "main",
         string? authorName = null, string? authorEmail = null, CancellationToken cancellationToken = default)
     {
+        path = path.TrimStart('/');
         _logger.LogInformation("Writing string content to '{Path}' in '{Owner}/{Repo}' on branch '{Branch}'.", path, owner, repo, branch);
 
         byte[] bytes = content.ToBytes();
@@ -166,6 +171,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
     public async ValueTask<FileCommit?> WriteFromFile(string owner, string repo, string path, string filePath, string? message = null, string branch = "main",
         string? authorName = null, string? authorEmail = null, CancellationToken cancellationToken = default)
     {
+        path = path.TrimStart('/');
         _logger.LogInformation("Reading local file '{LocalFilePath}' and writing to '{Path}' in '{Owner}/{Repo}' on branch '{Branch}'.", filePath, path, owner,
             repo, branch);
 
@@ -186,6 +192,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
     public async ValueTask<FileCommit?> WriteBytes(string owner, string repo, string path, byte[] content, string? message = null, string branch = "main",
         string? authorName = null, string? authorEmail = null, CancellationToken cancellationToken = default)
     {
+        path = path.TrimStart('/');
         _logger.LogInformation("Writing binary content to '{Path}' in '{Owner}/{Repo}' on branch '{Branch}'.", path, owner, repo, branch);
 
         GitHubOpenApiClient client;
@@ -254,6 +261,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
     public async ValueTask<IReadOnlyList<FileCommit>> WriteDirectory(string owner, string repo, string rootPath, string localDirPath, string? message = null,
         string branch = "main", string? authorName = null, string? authorEmail = null, CancellationToken cancellationToken = default)
     {
+        rootPath = rootPath.TrimStart('/');
         _logger.LogInformation("Writing directory '{LocalDirectory}' to '{RootPath}' in '{Owner}/{Repo}' on branch '{Branch}'.", localDirPath, rootPath, owner,
             repo, branch);
 
@@ -313,6 +321,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
     public async ValueTask<FileCommit?> Delete(string owner, string repo, string path, string? message = null, string branch = "main",
         string? authorName = null, string? authorEmail = null, CancellationToken cancellationToken = default)
     {
+        path = path.TrimStart('/');
         _logger.LogInformation("Deleting file '{Path}' from '{Owner}/{Repo}' on branch '{Branch}'.", path, owner, repo, branch);
 
         ContentFile existingFile;
@@ -376,6 +385,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
 
     public async ValueTask<ContentFile[]> List(string owner, string repo, string path, CancellationToken cancellationToken = default)
     {
+        path = path.TrimStart('/');
         _logger.LogInformation("Listing contents of directory '{Path}' in '{Owner}/{Repo}'.", path, owner, repo);
 
         GitHubOpenApiClient client;
@@ -424,6 +434,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
 
     public async ValueTask<bool> Exists(string owner, string repo, string path, CancellationToken cancellationToken = default)
     {
+        path = path.TrimStart('/');
         _logger.LogInformation("Checking existence of '{Path}' in '{Owner}/{Repo}'.", path, owner, repo);
 
         try
@@ -447,6 +458,8 @@ public sealed class GitHubFileStore : IGitHubFileStore
     public async ValueTask<FileCommit?> Copy(string owner, string repo, string sourcePath, string destPath, string? message = null, string branch = "main",
         string? authorName = null, string? authorEmail = null, CancellationToken cancellationToken = default)
     {
+        sourcePath = sourcePath.TrimStart('/');
+        destPath = destPath.TrimStart('/');
         _logger.LogInformation("Copying file from '{SourcePath}' to '{DestPath}' in '{Owner}/{Repo}'.", sourcePath, destPath, owner, repo);
 
         byte[] content;
@@ -476,6 +489,8 @@ public sealed class GitHubFileStore : IGitHubFileStore
     public async ValueTask<FileCommit?> Move(string owner, string repo, string sourcePath, string destPath, string? message = null, string branch = "main",
         string? authorName = null, string? authorEmail = null, CancellationToken cancellationToken = default)
     {
+        sourcePath = sourcePath.TrimStart('/');
+        destPath = destPath.TrimStart('/');
         _logger.LogInformation("Moving file from '{SourcePath}' to '{DestPath}' in '{Owner}/{Repo}'.", sourcePath, destPath, owner, repo);
 
         FileCommit? copyCommit;
@@ -505,6 +520,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
 
     public ValueTask<ContentFile> GetMetadata(string owner, string repo, string path, CancellationToken cancellationToken = default)
     {
+        path = path.TrimStart('/');
         _logger.LogInformation("Getting metadata for '{Path}' in '{Owner}/{Repo}'.", path, owner, repo);
         // This is simply an alias of Get, reserved for future metadata-only implementations.
         return Get(owner, repo, path, cancellationToken);
@@ -512,6 +528,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
 
     public string GetRawDownloadUrl(string owner, string repo, string path, string branch = "main")
     {
+        path = path.TrimStart('/');
         _logger.LogInformation("Generating raw download URL for '{Path}' in '{Owner}/{Repo}' on branch '{Branch}'.", path, owner, repo, branch);
         // Format: https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{path}
         return $"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{path}";
