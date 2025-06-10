@@ -185,4 +185,33 @@ public interface IGitHubFileStore
     /// <param name="branch">The branch name (defaults to "main").</param>
     /// <returns>The raw download URL.</returns>
     string GetRawDownloadUrl(string owner, string repo, string path, string branch = "main");
+
+    /// <summary>
+    /// Deletes a directory and all its contents from the repository.
+    /// </summary>
+    /// <param name="owner">The repository owner.</param>
+    /// <param name="repo">The repository name.</param>
+    /// <param name="path">The path to the directory to delete.</param>
+    /// <param name="message">Optional commit message. If not provided, an automated message will be used.</param>
+    /// <param name="branch">Optional branch name. Defaults to "main".</param>
+    /// <param name="authorName">Optional author name for the commit.</param>
+    /// <param name="authorEmail">Optional author email for the commit.</param>
+    /// <param name="cancellationToken">Optional cancellation token.</param>
+    /// <returns>A list of file commit results for each file deleted.</returns>
+    ValueTask<IReadOnlyList<FileCommit>> DeleteDirectory(string owner, string repo, string path, string? message = null, string branch = "main",
+        string? authorName = null, string? authorEmail = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes all contents from the repository.
+    /// </summary>
+    /// <param name="owner">The repository owner.</param>
+    /// <param name="repo">The repository name.</param>
+    /// <param name="message">Optional commit message. If not provided, an automated message will be used.</param>
+    /// <param name="branch">Optional branch name. Defaults to "main".</param>
+    /// <param name="authorName">Optional author name for the commit.</param>
+    /// <param name="authorEmail">Optional author email for the commit.</param>
+    /// <param name="cancellationToken">Optional cancellation token.</param>
+    /// <returns>A list of file commit results for each file deleted.</returns>
+    ValueTask<IReadOnlyList<FileCommit>> DeleteRepositoryContents(string owner, string repo, string? message = null, string branch = "main",
+        string? authorName = null, string? authorEmail = null, CancellationToken cancellationToken = default);
 }

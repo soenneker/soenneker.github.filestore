@@ -532,6 +532,67 @@ public sealed class GitHubFileStore : IGitHubFileStore
         return $"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{path}";
     }
 
+    public async ValueTask<IReadOnlyList<FileCommit>> DeleteDirectory(string owner, string repo, string path, string? message = null, string branch = "main",
+        string? authorName = null, string? authorEmail = null, CancellationToken cancellationToken = default)
+    {
+        path = path.TrimStart('/');
+        _logger.LogInformation("Deleting directory '{Path}' and its contents from '{Owner}/{Repo}' on branch '{Branch}'.", path, owner, repo, branch);
+
+        ContentFile[] contents;
+        try
+        {
+            contents = await List(owner, repo, path, cancellationToken).NoSync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to list contents of directory '{Path}' for deletion.", path);
+            throw;
+        }
+
+        var commits = new List<FileCommit>();
+
+        foreach (ContentFile item in contents)
+        {
+            if (item.Path == null)
+                continue;
+
+            try
+            {
+                FileCommit? commit = await Delete(owner, repo, item.Path, message, branch, authorName, authorEmail, cancellationToken).NoSync();
+                if (commit != null)
+                {
+                    commits.Add(commit);
+                    _logger.LogDebug("Deleted file '{Path}'. Commit SHA: {Sha}", item.Path, commit.Commit?.Sha);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to delete file '{Path}'. Continuing with remaining files.", item.Path);
+                continue;
+            }
+        }
+
+        _logger.LogInformation("Completed deleting directory '{Path}'. Total commits: {Count}", path, commits.Count);
+        return commits;
+    }
+
+    public async ValueTask<IReadOnlyList<FileCommit>> DeleteRepositoryContents(string owner, string repo, string? message = null, string branch = "main",
+        string? authorName = null, string? authorEmail = null, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Deleting all contents from repository '{Owner}/{Repo}' on branch '{Branch}'.", owner, repo, branch);
+
+        try
+        {
+            // Start from the root directory
+            return await DeleteDirectory(owner, repo, "", message, branch, authorName, authorEmail, cancellationToken).NoSync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete repository contents for '{Owner}/{Repo}'.", owner, repo);
+            throw;
+        }
+    }
+
     private static string GetDefaultMessage(string operation, string path)
     {
         return $"[File Store Update] {operation} {path} at {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC";
