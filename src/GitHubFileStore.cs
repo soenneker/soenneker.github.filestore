@@ -147,7 +147,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
 
         try
         {
-            await _fileUtil.Write(filePath, fileBytes, cancellationToken).NoSync();
+            await _fileUtil.Write(filePath, fileBytes, true, cancellationToken).NoSync();
         }
         catch (Exception ex)
         {
@@ -178,7 +178,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
         byte[] fileBytes;
         try
         {
-            fileBytes = await _fileUtil.ReadToBytes(filePath, cancellationToken).NoSync();
+            fileBytes = await _fileUtil.ReadToBytes(filePath, true, cancellationToken).NoSync();
         }
         catch (Exception ex)
         {
@@ -288,7 +288,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
             byte[] content;
             try
             {
-                content = await _fileUtil.ReadToBytes(filePath, cancellationToken).NoSync();
+                content = await _fileUtil.ReadToBytes(filePath, true, cancellationToken).NoSync();
             }
             catch (Exception ex)
             {
