@@ -51,7 +51,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
         WithPathItemRequestBuilder.WithPathGetResponse? response;
         try
         {
-            response = await client.Repos[owner][repo].Contents[path].GetAsWithPathGetResponseAsync(cancellationToken: cancellationToken).NoSync();
+            response = await client.Repos[owner][repo].Contents[path].GetAsync(cancellationToken: cancellationToken).NoSync();
         }
         catch (Exception ex) when (!(ex is FileNotFoundException) && !(ex is BasicError))
         {
@@ -400,7 +400,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
         WithPathItemRequestBuilder.WithPathGetResponse? response;
         try
         {
-            response = await client.Repos[owner][repo].Contents[path].GetAsWithPathGetResponseAsync(cancellationToken: cancellationToken).NoSync();
+            response = await client.Repos[owner][repo].Contents[path].GetAsync(cancellationToken: cancellationToken).NoSync();
         }
         catch (Exception ex)
         {
