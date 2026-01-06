@@ -595,6 +595,6 @@ public sealed class GitHubFileStore : IGitHubFileStore
 
     private static string GetDefaultMessage(string operation, string path)
     {
-        return $"[File Store Update] {operation} {path} at {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC";
+        return $"[File Store Update] {operation} {path} at {DateTimeOffset.UtcNow:yyyy-MM-dd HH:mm:ss} UTC";
     }
 }
