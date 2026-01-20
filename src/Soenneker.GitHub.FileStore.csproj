@@ -41,7 +41,7 @@
     </ItemGroup>
     
     <ItemGroup>
-      <PackageReference Include="Soenneker.GitHub.ClientUtil" Version="4.0.279" />
+      <PackageReference Include="Soenneker.GitHub.ClientUtil" Version="4.0.281" />
       <PackageReference Include="Soenneker.Utils.File" Version="4.0.2049" />
     </ItemGroup>
 </Project>
