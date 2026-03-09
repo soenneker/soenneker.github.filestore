@@ -1,18 +1,19 @@
-﻿[![](https://img.shields.io/nuget/v/soenneker.github.filestore.svg?style=for-the-badge)](https://www.nuget.org/packages/soenneker.github.filestore/)
+[![](https://img.shields.io/nuget/v/soenneker.github.filestore.svg?style=for-the-badge)](https://www.nuget.org/packages/soenneker.github.filestore/)
 [![](https://img.shields.io/github/actions/workflow/status/soenneker/soenneker.github.filestore/publish-package.yml?style=for-the-badge)](https://github.com/soenneker/soenneker.github.filestore/actions/workflows/publish-package.yml)
 [![](https://img.shields.io/nuget/dt/soenneker.github.filestore.svg?style=for-the-badge)](https://www.nuget.org/packages/soenneker.github.filestore/)
+[![](https://img.shields.io/github/actions/workflow/status/soenneker/soenneker.github.filestore/codeql.yml?label=CodeQL&style=for-the-badge)](https://github.com/soenneker/soenneker.github.filestore/actions/workflows/codeql.yml)
 
 # ![](https://user-images.githubusercontent.com/4441470/224455560-91ed3ee7-f510-4041-a8d2-3fc093025112.png) Soenneker.GitHub.FileStore
 ### A high-level file system utility for GitHub repositories, built on the GitHub OpenAPI client. Supports reading, writing, deleting, listing, and checking file existence via the GitHub Contents API.
 
 ## Features
 
-* 🔍 Read file content from a GitHub repository
-* 📝 Write new files with commit messages and optional branch targeting
-* ❌ Delete files with SHA validation
-* 📂 List directory contents
-* ✅ Check for file existence
-* ⛓️ Built on top of a typed OpenAPI GitHub client
+* ?? Read file content from a GitHub repository
+* ?? Write new files with commit messages and optional branch targeting
+* ? Delete files with SHA validation
+* ?? List directory contents
+* ? Check for file existence
+* ?? Built on top of a typed OpenAPI GitHub client
 
 ## Installation
 
@@ -28,7 +29,7 @@ builder.Services.AddGitHubFileStoreAsSingleton();
 
 This will register all necessary dependencies, including the underlying GitHub OpenAPI client.
 
-ℹ️ **Note**: The GitHub access token must be provided via configuration under the key: `GitHub:Token`.
+?? **Note**: The GitHub access token must be provided via configuration under the key: `GitHub:Token`.
 
 ## Example Usage
 
