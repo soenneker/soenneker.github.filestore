@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Soenneker.Extensions.Arrays.Bytes;
 using Soenneker.Extensions.String;
 using Soenneker.Extensions.Task;
@@ -49,12 +49,12 @@ public sealed class GitHubFileStore : IGitHubFileStore
             throw;
         }
 
-        WithPathItemRequestBuilder.WithPathGetResponse? response;
+        ReposGetContent200? response;
         try
         {
             response = await client.Repos[owner][repo]
                                    .Contents[path]
-                                   .GetAsync(body: Stream.Null, cancellationToken: cancellationToken)
+                                   .GetAsync(body: new WithPathGetRequestBody(), cancellationToken: cancellationToken)
                                    .NoSync();
         }
         catch (Exception ex) when (!(ex is FileNotFoundException) && !(ex is BasicError))
@@ -218,13 +218,13 @@ public sealed class GitHubFileStore : IGitHubFileStore
             throw;
         }
 
-        var requestBody = new WithPathPutRequestBody
+        var requestBody = new ReposCreateOrUpdateFileContents
         {
             Message = message ?? GetDefaultMessage("Write", path),
             Content = Convert.ToBase64String(content),
             Branch = branch,
             Author = authorName != null && authorEmail != null
-                ? new WithPathPutRequestBody_author
+                ? new ReposCreateOrUpdateFileContents_author
                 {
                     Name = authorName,
                     Email = authorEmail
@@ -353,13 +353,13 @@ public sealed class GitHubFileStore : IGitHubFileStore
             throw;
         }
 
-        var requestBody = new WithPathDeleteRequestBody
+        var requestBody = new ReposDeleteFile
         {
             Message = message ?? GetDefaultMessage("Delete", path),
             Sha = existingFile.Sha,
             Branch = branch,
             Author = authorName != null && authorEmail != null
-                ? new WithPathDeleteRequestBody_author
+                ? new ReposDeleteFile_author
                 {
                     Name = authorName,
                     Email = authorEmail
@@ -422,12 +422,12 @@ public sealed class GitHubFileStore : IGitHubFileStore
             throw;
         }
 
-        WithPathItemRequestBuilder.WithPathGetResponse? response;
+        ReposGetContent200? response;
         try
         {
             response = await client.Repos[owner][repo]
                                    .Contents[path]
-                                   .GetAsync(body: Stream.Null, cancellationToken: cancellationToken)
+                                   .GetAsync(body: new WithPathGetRequestBody(), cancellationToken: cancellationToken)
                                    .NoSync();
         }
         catch (Exception ex)
@@ -436,21 +436,21 @@ public sealed class GitHubFileStore : IGitHubFileStore
             throw;
         }
 
-        if (response?.WithPathGetResponseMember1 == null)
+        if (response?.ContentDirectoryWrapper?.Value == null)
         {
             var message = $"Path is not a directory: {path}";
             _logger.LogWarning(message);
             throw new InvalidOperationException(message);
         }
 
-        ContentFile[] items = response.WithPathGetResponseMember1.Select(item => new ContentFile
+        ContentFile[] items = response.ContentDirectoryWrapper!.Value!.Select(item => new ContentFile
                                       {
-                                          Name = item.AdditionalData["name"] as string,
-                                          Path = item.AdditionalData["path"] as string,
-                                          Sha = item.AdditionalData["sha"] as string,
-                                          Size = item.AdditionalData["size"] as int?,
-                                          Type = (item.AdditionalData["type"] as string) == "dir" ? ContentFile_type.File : ContentFile_type.File,
-                                          Url = item.AdditionalData["url"] as string
+                                          Name = item.Name,
+                                          Path = item.Path,
+                                          Sha = item.Sha,
+                                          Size = item.Size,
+                                          Type = ContentFile_type.File,
+                                          Url = item.Url
                                       })
                                       .ToArray();
 
