@@ -1,20 +1,19 @@
-﻿using Soenneker.GitHub.FileStore.Abstract;
-using Soenneker.Tests.FixturedUnit;
-using Xunit;
+using Soenneker.GitHub.FileStore.Abstract;
+using Soenneker.Tests.HostedUnit;
 
 namespace Soenneker.GitHub.FileStore.Tests;
 
-[Collection("Collection")]
-public class GitHubFileStoreTests : FixturedUnitTest
+[ClassDataSource<Host>(Shared = SharedType.PerTestSession)]
+public class GitHubFileStoreTests : HostedUnitTest
 {
     private readonly IGitHubFileStore _util;
 
-    public GitHubFileStoreTests(Fixture fixture, ITestOutputHelper output) : base(fixture, output)
+    public GitHubFileStoreTests(Host host) : base(host)
     {
         _util = Resolve<IGitHubFileStore>(true);
     }
 
-    [Fact]
+    [Test]
     public void Default()
     {
 
