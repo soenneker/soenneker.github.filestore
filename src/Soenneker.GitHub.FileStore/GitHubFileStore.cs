@@ -49,7 +49,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
             throw;
         }
 
-        ReposGetContent200? response;
+        ReposGetContent200Response? response;
         try
         {
             response = await client.Repos[owner][repo]
@@ -218,13 +218,13 @@ public sealed class GitHubFileStore : IGitHubFileStore
             throw;
         }
 
-        var requestBody = new ReposCreateOrUpdateFileContents
+        var requestBody = new ReposCreateOrUpdateFileContentsRequest
         {
             Message = message ?? GetDefaultMessage("Write", path),
             Content = Convert.ToBase64String(content),
             Branch = branch,
             Author = authorName != null && authorEmail != null
-                ? new ReposCreateOrUpdateFileContents_author
+                ? new ReposCreateOrUpdateFileContentsRequestAuthor
                 {
                     Name = authorName,
                     Email = authorEmail
@@ -353,13 +353,13 @@ public sealed class GitHubFileStore : IGitHubFileStore
             throw;
         }
 
-        var requestBody = new ReposDeleteFile
+        var requestBody = new ReposDeleteFileRequest
         {
             Message = message ?? GetDefaultMessage("Delete", path),
             Sha = existingFile.Sha,
             Branch = branch,
             Author = authorName != null && authorEmail != null
-                ? new ReposDeleteFile_author
+                ? new ReposDeleteFileRequestAuthor
                 {
                     Name = authorName,
                     Email = authorEmail
@@ -422,7 +422,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
             throw;
         }
 
-        ReposGetContent200? response;
+        ReposGetContent200Response? response;
         try
         {
             response = await client.Repos[owner][repo]
@@ -449,7 +449,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
                                           Path = item.Path,
                                           Sha = item.Sha,
                                           Size = item.Size,
-                                          Type = ContentFile_type.File,
+                                          Type = ContentFileType.File,
                                           Url = item.Url
                                       })
                                       .ToArray();
