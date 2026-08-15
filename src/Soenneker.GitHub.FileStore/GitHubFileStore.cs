@@ -449,7 +449,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
                                           Path = item.Path,
                                           Sha = item.Sha,
                                           Size = item.Size,
-                                          Type = ContentFileType.File,
+                                          Type = FileType.File,
                                           Url = item.Url
                                       })
                                       .ToArray();
