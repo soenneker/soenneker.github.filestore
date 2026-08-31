@@ -18,7 +18,6 @@ using System.Threading.Tasks;
 
 namespace Soenneker.GitHub.FileStore;
 
-///<inheritdoc cref="IGitHubFileStore"/>
 public sealed class GitHubFileStore : IGitHubFileStore
 {
     private readonly IGitHubOpenApiClientUtil _clientUtil;
@@ -32,7 +31,12 @@ public sealed class GitHubFileStore : IGitHubFileStore
         _logger = logger;
     }
 
-    public async ValueTask<ContentFile> Get(string owner, string repo, string path, CancellationToken cancellationToken = default)
+    public ValueTask<ContentFile> Get(string owner, string repo, string path, CancellationToken cancellationToken = default)
+    {
+        return Get(owner, repo, path, null, cancellationToken);
+    }
+
+    private async ValueTask<ContentFile> Get(string owner, string repo, string path, string? branch, CancellationToken cancellationToken)
     {
         path = path.TrimStart('/');
         _logger.LogInformation("Getting file '{Path}' from '{Owner}/{Repo}'.", path, owner, repo);
@@ -54,10 +58,16 @@ public sealed class GitHubFileStore : IGitHubFileStore
         {
             response = await client.Repos[owner][repo]
                                    .Contents[path]
-                                   .GetAsync(body: new WithPathGetRequestBody(), cancellationToken: cancellationToken)
+                                   .GetAsync(body: new WithPathGetRequestBody(),
+                                       requestConfiguration: requestConfiguration => requestConfiguration.QueryParameters.Ref = branch,
+                                       cancellationToken: cancellationToken)
                                    .NoSync();
         }
-        catch (Exception ex) when (!(ex is FileNotFoundException) && !(ex is BasicError))
+        catch (BasicError ex) when (ex.ResponseStatusCode == 404)
+        {
+            throw new FileNotFoundException($"File not found: {path}", ex);
+        }
+        catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving content for '{Path}'.", path);
             throw;
@@ -96,7 +106,12 @@ public sealed class GitHubFileStore : IGitHubFileStore
         return result;
     }
 
-    public async ValueTask<byte[]> ReadToBytes(string owner, string repo, string path, CancellationToken cancellationToken = default)
+    public ValueTask<byte[]> ReadToBytes(string owner, string repo, string path, CancellationToken cancellationToken = default)
+    {
+        return ReadToBytes(owner, repo, path, null, cancellationToken);
+    }
+
+    private async ValueTask<byte[]> ReadToBytes(string owner, string repo, string path, string? branch, CancellationToken cancellationToken)
     {
         path = path.TrimStart('/');
         _logger.LogInformation("Reading file '{Path}' as bytes from '{Owner}/{Repo}'.", path, owner, repo);
@@ -104,7 +119,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
         ContentFile contentFile;
         try
         {
-            contentFile = await Get(owner, repo, path, cancellationToken)
+            contentFile = await Get(owner, repo, path, branch, cancellationToken)
                 .NoSync();
         }
         catch (Exception ex)
@@ -234,7 +249,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
 
         try
         {
-            ContentFile existing = await Get(owner, repo, path, cancellationToken)
+            ContentFile existing = await Get(owner, repo, path, branch, cancellationToken)
                 .NoSync();
             requestBody.Sha = existing.Sha;
             _logger.LogDebug("Existing file '{Path}' found. Using SHA '{Sha}' for update.", path, existing.Sha);
@@ -242,10 +257,6 @@ public sealed class GitHubFileStore : IGitHubFileStore
         catch (FileNotFoundException)
         {
             _logger.LogDebug("No existing file at '{Path}'; creating new.", path);
-        }
-        catch (BasicError ex) when (ex.Message?.Contains("This repository is empty") == true || ex.Message?.Contains("Not Found") == true)
-        {
-            _logger.LogDebug("Repository is empty or file not found; creating new file without SHA.");
         }
 
         FileCommit? commit;
@@ -344,7 +355,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
         ContentFile existingFile;
         try
         {
-            existingFile = await Get(owner, repo, path, cancellationToken)
+            existingFile = await Get(owner, repo, path, branch, cancellationToken)
                 .NoSync();
         }
         catch (Exception ex)
@@ -407,6 +418,23 @@ public sealed class GitHubFileStore : IGitHubFileStore
 
     public async ValueTask<ContentFile[]> List(string owner, string repo, string path, CancellationToken cancellationToken = default)
     {
+        ContentDirectoryItem[] directoryItems = await ListItems(owner, repo, path, null, cancellationToken).NoSync();
+
+        return directoryItems.Select(item => new ContentFile
+                             {
+                                 Name = item.Name,
+                                 Path = item.Path,
+                                 Sha = item.Sha,
+                                 Size = item.Size,
+                                 Type = FileType.File,
+                                 Url = item.Url
+                             })
+                             .ToArray();
+    }
+
+    private async ValueTask<ContentDirectoryItem[]> ListItems(string owner, string repo, string path, string? branch,
+        CancellationToken cancellationToken)
+    {
         path = path.TrimStart('/');
         _logger.LogInformation("Listing contents of directory '{Path}' in '{Owner}/{Repo}'.", path, owner, repo);
 
@@ -427,7 +455,9 @@ public sealed class GitHubFileStore : IGitHubFileStore
         {
             response = await client.Repos[owner][repo]
                                    .Contents[path]
-                                   .GetAsync(body: new WithPathGetRequestBody(), cancellationToken: cancellationToken)
+                                   .GetAsync(body: new WithPathGetRequestBody(),
+                                       requestConfiguration: requestConfiguration => requestConfiguration.QueryParameters.Ref = branch,
+                                       cancellationToken: cancellationToken)
                                    .NoSync();
         }
         catch (Exception ex)
@@ -443,16 +473,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
             throw new InvalidOperationException(message);
         }
 
-        ContentFile[] items = response.ContentDirectoryWrapper!.Value!.Select(item => new ContentFile
-                                      {
-                                          Name = item.Name,
-                                          Path = item.Path,
-                                          Sha = item.Sha,
-                                          Size = item.Size,
-                                          Type = FileType.File,
-                                          Url = item.Url
-                                      })
-                                      .ToArray();
+        ContentDirectoryItem[] items = response.ContentDirectoryWrapper.Value.ToArray();
 
         _logger.LogDebug("Found {Count} items in '{Path}'.", items.Length, path);
         return items;
@@ -475,11 +496,6 @@ public sealed class GitHubFileStore : IGitHubFileStore
             _logger.LogDebug("'{Path}' does not exist in '{Owner}/{Repo}'.", path, owner, repo);
             return false;
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error checking existence of '{Path}'.", path);
-            return false;
-        }
     }
 
     public async ValueTask<FileCommit?> Copy(string owner, string repo, string sourcePath, string destPath, string? message = null, string branch = "main",
@@ -492,7 +508,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
         byte[] content;
         try
         {
-            content = await ReadToBytes(owner, repo, sourcePath, cancellationToken)
+            content = await ReadToBytes(owner, repo, sourcePath, branch, cancellationToken)
                 .NoSync();
         }
         catch (Exception ex)
@@ -571,10 +587,10 @@ public sealed class GitHubFileStore : IGitHubFileStore
         path = path.TrimStart('/');
         _logger.LogInformation("Deleting directory '{Path}' and its contents from '{Owner}/{Repo}' on branch '{Branch}'.", path, owner, repo, branch);
 
-        ContentFile[] contents;
+        ContentDirectoryItem[] contents;
         try
         {
-            contents = await List(owner, repo, path, cancellationToken)
+            contents = await ListItems(owner, repo, path, branch, cancellationToken)
                 .NoSync();
         }
         catch (Exception ex)
@@ -585,13 +601,22 @@ public sealed class GitHubFileStore : IGitHubFileStore
 
         var commits = new List<FileCommit>();
 
-        foreach (ContentFile item in contents)
+        foreach (ContentDirectoryItem item in contents)
         {
             if (item.Path == null)
                 continue;
 
             try
             {
+                if (item.Type == ContentDirectoryItemType.Dir)
+                {
+                    IReadOnlyList<FileCommit> nestedCommits = await DeleteDirectory(owner, repo, item.Path, message, branch, authorName, authorEmail,
+                            cancellationToken)
+                        .NoSync();
+                    commits.AddRange(nestedCommits);
+                    continue;
+                }
+
                 FileCommit? commit = await Delete(owner, repo, item.Path, message, branch, authorName, authorEmail, cancellationToken)
                     .NoSync();
                 if (commit != null)

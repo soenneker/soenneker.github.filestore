@@ -3,61 +3,69 @@
 [![](https://img.shields.io/nuget/dt/soenneker.github.filestore.svg?style=for-the-badge)](https://www.nuget.org/packages/soenneker.github.filestore/)
 [![](https://img.shields.io/github/actions/workflow/status/soenneker/soenneker.github.filestore/codeql.yml?label=CodeQL&style=for-the-badge)](https://github.com/soenneker/soenneker.github.filestore/actions/workflows/codeql.yml)
 
-# ![](https://user-images.githubusercontent.com/4441470/224455560-91ed3ee7-f510-4041-a8d2-3fc093025112.png) Soenneker.GitHub.FileStore
-### A high-level file system utility for GitHub repositories, built on the GitHub OpenAPI client. Supports reading, writing, deleting, listing, and checking file existence via the GitHub Contents API.
+# Soenneker.GitHub.FileStore
 
-## Features
-
-* ?? Read file content from a GitHub repository
-* ?? Write new files with commit messages and optional branch targeting
-* ? Delete files with SHA validation
-* ?? List directory contents
-* ? Check for file existence
-* ?? Built on top of a typed OpenAPI GitHub client
+Reads, writes, copies, moves, lists, and deletes repository files through GitHub's Contents API.
 
 ## Installation
 
 ```bash
 dotnet add package Soenneker.GitHub.FileStore
-````
-
-## Setup
-
-```csharp
-builder.Services.AddGitHubFileStoreAsSingleton();
 ```
 
-This will register all necessary dependencies, including the underlying GitHub OpenAPI client.
+## Configure and register
 
-?? **Note**: The GitHub access token must be provided via configuration under the key: `GitHub:Token`.
-
-## Example Usage
-
-```csharp
-public class MyService
+```json
 {
-    private readonly IGitHubFileStore _store;
-
-    public MyService(IGitHubFileStore store)
-    {
-        _store = store;
-    }
-
-    public async Task Run()
-    {
-        string content = await _store.Read("owner", "repo", "README.md");
-
-        await _store.Create("owner", "repo", "newfile.txt", "Hello world!");
-
-        bool exists = await _store.Exists("owner", "repo", "README.md");
-
-        var files = await _store.List("owner", "repo", "docs");
-
-        await _store.Delete("owner", "repo", "oldfile.txt");
-    }
+  "GH": {
+    "Token": "your-github-token"
+  }
 }
 ```
 
-## Related Packages
+```csharp
+using Soenneker.GitHub.FileStore.Registrars;
 
-* [`Soenneker.GitHub.OpenApiClient`](https://www.nuget.org/packages/Soenneker.GitHub.OpenApiClient)
+builder.Services.AddGitHubFileStoreAsSingleton();
+```
+
+Use a token with Contents read permission for `Get`, `Read`, `List`, and `Exists`. Writes and deletes require Contents write permission. Keep the token in secret storage.
+
+## Read and write files
+
+```csharp
+string content = await store.Read(
+    "example-org", "example-repository", "README.md", cancellationToken);
+
+FileCommit? commit = await store.Write(
+    owner: "example-org",
+    repo: "example-repository",
+    path: "docs/example.txt",
+    content: "Hello from the Contents API",
+    message: "Add example document",
+    branch: "main",
+    cancellationToken: cancellationToken);
+```
+
+`Write` and `WriteBytes` create a file when it does not exist and use its current SHA when updating it. The lookup is performed on the requested branch, so non-default branch updates do not reuse a SHA from `main`. Supplying both `authorName` and `authorEmail` sets the commit author; supplying only one leaves the author unset.
+
+## Copy, move, and directory operations
+
+```csharp
+await store.Copy(
+    "example-org", "example-repository",
+    "docs/source.txt", "archive/source.txt",
+    branch: "release",
+    cancellationToken: cancellationToken);
+
+IReadOnlyList<FileCommit> deleted = await store.DeleteDirectory(
+    "example-org", "example-repository", "old-docs",
+    branch: "release",
+    cancellationToken: cancellationToken);
+```
+
+Copy and move read from the same branch they write to. A move is two commits—copy, then delete—so a failed delete can leave both paths and throws for the caller to handle. `WriteDirectory` and recursive deletion process files as separate commits and continue past individual file failures; their returned lists contain only successful commits.
+
+`Delete`, `DeleteDirectory`, and `DeleteRepositoryContents` are destructive. They retrieve branch-specific SHAs immediately before deletion, but concurrent changes can still cause GitHub to reject a stale SHA.
+
+`Exists()` returns `false` only for a not-found response. Authentication, permission, rate-limit, and transport failures propagate instead of being reported as a missing file.
