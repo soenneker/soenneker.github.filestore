@@ -18,6 +18,7 @@ using System.Threading.Tasks;
 
 namespace Soenneker.GitHub.FileStore;
 
+/// <inheritdoc cref="IGitHubFileStore" />
 public sealed class GitHubFileStore : IGitHubFileStore
 {
     private readonly IGitHubOpenApiClientUtil _clientUtil;
