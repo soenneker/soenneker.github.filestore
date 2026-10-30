@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Kiota.Abstractions.Serialization;
 using Soenneker.Extensions.Arrays.Bytes;
 using Soenneker.Extensions.String;
 using Soenneker.Extensions.Task;
@@ -7,7 +8,6 @@ using Soenneker.GitHub.ClientUtil.Abstract;
 using Soenneker.GitHub.FileStore.Abstract;
 using Soenneker.GitHub.OpenApiClient;
 using Soenneker.GitHub.OpenApiClient.Models;
-using Soenneker.GitHub.OpenApiClient.Repos.Item.Item.Contents.Item;
 using Soenneker.Utils.File.Abstract;
 using System;
 using System.Collections.Generic;
@@ -18,7 +18,6 @@ using System.Threading.Tasks;
 
 namespace Soenneker.GitHub.FileStore;
 
-/// <inheritdoc cref="IGitHubFileStore" />
 public sealed class GitHubFileStore : IGitHubFileStore
 {
     private readonly IGitHubOpenApiClientUtil _clientUtil;
@@ -59,7 +58,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
         {
             response = await client.Repos[owner][repo]
                                    .Contents[path]
-                                   .GetAsync(body: new WithPathGetRequestBody(),
+                                   .GetAsync(body: new UntypedObject(new Dictionary<string, UntypedNode>()),
                                        requestConfiguration: requestConfiguration => requestConfiguration.QueryParameters.Ref = branch,
                                        cancellationToken: cancellationToken)
                                    .NoSync();
@@ -423,12 +422,12 @@ public sealed class GitHubFileStore : IGitHubFileStore
 
         return directoryItems.Select(item => new ContentFile
                              {
-                                 Name = item.Name,
-                                 Path = item.Path,
-                                 Sha = item.Sha,
-                                 Size = item.Size,
+                                 Name = GetDirectoryItemValue(item, "name") as string,
+                                 Path = GetDirectoryItemValue(item, "path") as string,
+                                 Sha = GetDirectoryItemValue(item, "sha") as string,
+                                 Size = GetDirectoryItemValue(item, "size") is { } size ? Convert.ToInt32(size) : null,
                                  Type = FileType.File,
-                                 Url = item.Url
+                                 Url = GetDirectoryItemValue(item, "url") as string
                              })
                              .ToArray();
     }
@@ -456,7 +455,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
         {
             response = await client.Repos[owner][repo]
                                    .Contents[path]
-                                   .GetAsync(body: new WithPathGetRequestBody(),
+                                   .GetAsync(body: new UntypedObject(new Dictionary<string, UntypedNode>()),
                                        requestConfiguration: requestConfiguration => requestConfiguration.QueryParameters.Ref = branch,
                                        cancellationToken: cancellationToken)
                                    .NoSync();
@@ -467,14 +466,14 @@ public sealed class GitHubFileStore : IGitHubFileStore
             throw;
         }
 
-        if (response?.ContentDirectoryWrapper?.Value == null)
+        if (response?.ContentDirectoryItem == null)
         {
             var message = $"Path is not a directory: {path}";
             _logger.LogWarning(message);
             throw new InvalidOperationException(message);
         }
 
-        ContentDirectoryItem[] items = response.ContentDirectoryWrapper.Value.ToArray();
+        ContentDirectoryItem[] items = response.ContentDirectoryItem.ToArray();
 
         _logger.LogDebug("Found {Count} items in '{Path}'.", items.Length, path);
         return items;
@@ -604,31 +603,32 @@ public sealed class GitHubFileStore : IGitHubFileStore
 
         foreach (ContentDirectoryItem item in contents)
         {
-            if (item.Path == null)
+            string? itemPath = GetDirectoryItemValue(item, "path") as string;
+            if (itemPath == null)
                 continue;
 
             try
             {
-                if (item.Type == ContentDirectoryItemType.Dir)
+                if (GetDirectoryItemValue(item, "type") as string == "dir")
                 {
-                    IReadOnlyList<FileCommit> nestedCommits = await DeleteDirectory(owner, repo, item.Path, message, branch, authorName, authorEmail,
+                    IReadOnlyList<FileCommit> nestedCommits = await DeleteDirectory(owner, repo, itemPath, message, branch, authorName, authorEmail,
                             cancellationToken)
                         .NoSync();
                     commits.AddRange(nestedCommits);
                     continue;
                 }
 
-                FileCommit? commit = await Delete(owner, repo, item.Path, message, branch, authorName, authorEmail, cancellationToken)
+                FileCommit? commit = await Delete(owner, repo, itemPath, message, branch, authorName, authorEmail, cancellationToken)
                     .NoSync();
                 if (commit != null)
                 {
                     commits.Add(commit);
-                    _logger.LogDebug("Deleted file '{Path}'. Commit SHA: {Sha}", item.Path, commit.Commit?.Sha);
+                    _logger.LogDebug("Deleted file '{Path}'. Commit SHA: {Sha}", itemPath, commit.Commit?.Sha);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to delete file '{Path}'. Continuing with remaining files.", item.Path);
+                _logger.LogError(ex, "Failed to delete file '{Path}'. Continuing with remaining files.", itemPath);
                 continue;
             }
         }
@@ -653,6 +653,14 @@ public sealed class GitHubFileStore : IGitHubFileStore
             _logger.LogError(ex, "Failed to delete repository contents for '{Owner}/{Repo}'.", owner, repo);
             throw;
         }
+    }
+
+    private static object? GetDirectoryItemValue(ContentDirectoryItem item, string name)
+    {
+        if (!item.AdditionalData.TryGetValue(name, out object? value))
+            return null;
+
+        return value is UntypedNode node ? node.GetValue() : value;
     }
 
     private static string GetDefaultMessage(string operation, string path)
