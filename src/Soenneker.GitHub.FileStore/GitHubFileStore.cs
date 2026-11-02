@@ -58,8 +58,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
         {
             response = await client.Repos[owner][repo]
                                    .Contents[path]
-                                   .GetAsync(body: new UntypedObject(new Dictionary<string, UntypedNode>()),
-                                       requestConfiguration: requestConfiguration => requestConfiguration.QueryParameters.Ref = branch,
+                                   .GetAsync(requestConfiguration: requestConfiguration => requestConfiguration.QueryParameters.Ref = branch,
                                        cancellationToken: cancellationToken)
                                    .NoSync();
         }
@@ -455,8 +454,7 @@ public sealed class GitHubFileStore : IGitHubFileStore
         {
             response = await client.Repos[owner][repo]
                                    .Contents[path]
-                                   .GetAsync(body: new UntypedObject(new Dictionary<string, UntypedNode>()),
-                                       requestConfiguration: requestConfiguration => requestConfiguration.QueryParameters.Ref = branch,
+                                   .GetAsync(requestConfiguration: requestConfiguration => requestConfiguration.QueryParameters.Ref = branch,
                                        cancellationToken: cancellationToken)
                                    .NoSync();
         }
