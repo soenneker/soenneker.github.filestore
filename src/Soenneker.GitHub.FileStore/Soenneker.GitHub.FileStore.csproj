@@ -47,7 +47,7 @@
     
     <ItemGroup>
       <PackageReference Include="Soenneker.Extensions.Arrays.Bytes" Version="11.0.81" />
-      <PackageReference Include="Soenneker.GitHub.ClientUtil" Version="11.0.781" />
+      <PackageReference Include="Soenneker.GitHub.ClientUtil" Version="11.0.782" />
       <PackageReference Include="Soenneker.Utils.File" Version="11.0.2342" />
     </ItemGroup>
 </Project>
