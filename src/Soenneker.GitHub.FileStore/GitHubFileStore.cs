@@ -177,7 +177,8 @@ public sealed class GitHubFileStore : IGitHubFileStore
             throw;
         }
 
-        _logger.LogDebug("Successfully wrote '{Path}' to '{FilePath}'.", path, filePath);
+        if (_logger.IsEnabled(LogLevel.Debug))
+            _logger.LogDebug("Successfully wrote '{Path}' to '{FilePath}'.", path, filePath);
     }
 
     public async ValueTask<FileCommit?> Write(string owner, string repo, string path, string content, string? message = null, string branch = "main",
@@ -255,7 +256,8 @@ public sealed class GitHubFileStore : IGitHubFileStore
         }
         catch (FileNotFoundException)
         {
-            _logger.LogDebug("No existing file at '{Path}'; creating new.", path);
+            if (_logger.IsEnabled(LogLevel.Debug))
+                _logger.LogDebug("No existing file at '{Path}'; creating new.", path);
         }
 
         FileCommit? commit;
@@ -310,7 +312,8 @@ public sealed class GitHubFileStore : IGitHubFileStore
                                       .Replace('\\', '/');
             var gitHubPath = $"{rootPath.TrimEnd('/')}/{relativePath}";
 
-            _logger.LogDebug("Processing file '{LocalFilePath}', mapping to '{GitHubPath}'.", filePath, gitHubPath);
+            if (_logger.IsEnabled(LogLevel.Debug))
+                _logger.LogDebug("Processing file '{LocalFilePath}', mapping to '{GitHubPath}'.", filePath, gitHubPath);
 
             byte[] content;
             try
@@ -486,12 +489,14 @@ public sealed class GitHubFileStore : IGitHubFileStore
         {
             await Get(owner, repo, path, cancellationToken)
                 .NoSync();
-            _logger.LogDebug("'{Path}' exists in '{Owner}/{Repo}'.", path, owner, repo);
+            if (_logger.IsEnabled(LogLevel.Debug))
+                _logger.LogDebug("'{Path}' exists in '{Owner}/{Repo}'.", path, owner, repo);
             return true;
         }
         catch (FileNotFoundException)
         {
-            _logger.LogDebug("'{Path}' does not exist in '{Owner}/{Repo}'.", path, owner, repo);
+            if (_logger.IsEnabled(LogLevel.Debug))
+                _logger.LogDebug("'{Path}' does not exist in '{Owner}/{Repo}'.", path, owner, repo);
             return false;
         }
     }
